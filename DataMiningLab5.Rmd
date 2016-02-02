@@ -1,0 +1,161 @@
+---
+title: "Data Mining lab 5"
+author: "Jonathan Kuek"
+date: "3 December 2015"
+output: html_document
+---
+
+```{r}
+library(RSNNS)
+set.seed(111)
+
+Math <- read.csv("https://courseworks.columbia.edu/x/ir2NNs", sep = ";") 
+Language <- read.csv("https://courseworks.columbia.edu/x/iX6mmf", sep = ";") 
+all(colnames(Math) == colnames(Language))
+
+Math <- Math[sample(1:nrow(Math) ,length(1:nrow(Math))), 1:ncol(Math)]
+Math_Matrix <- (model.matrix(G3 ~ . - G1 - G2, data = Math))[, -1]
+Math_Matrix <- normalizeData(Math_Matrix)
+
+Language <- Language[sample(1:nrow(Language) ,length(1:nrow(Language))), 1:ncol(Language)]
+Language_Matrix <- (model.matrix(G3 ~ . - G1 - G2, data = Language))[, -1]
+Language_Matrix <- normalizeData(Language_Matrix)
+
+```
+
+
+
+```{r}
+#testing for size 2
+model <- elman(Math_Matrix, Math$G3,
+ size = 2, maxit = 500,
+ inputsTest = Language_Matrix, targetsTest = Language$G3,
+ linOut = TRUE)
+plotIterativeError(model)
+plot(Math$G3, type = "l")
+lines(model$fitted.values, col = "green")
+
+#testing for squared errors
+Math_predict <- predict(model, newdata = Math_Matrix)
+Language_predict <- predict(model, newdata = Language_Matrix)
+
+training_sse <- mean((Math$G3 - Math_predict) ^ 2)
+print(training_sse)
+testing_sse <- mean((Language$G3 - Language_predict) ^ 2)
+print(testing_sse)
+
+
+```
+
+```{r}
+#testing for size 4
+model <- elman(Math_Matrix, Math$G3,
+ size = 4, maxit = 500,
+ inputsTest = Language_Matrix, targetsTest = Language$G3,
+ linOut = TRUE)
+plotIterativeError(model)
+plot(Math$G3, type = "l")
+lines(model$fitted.values, col = "green")
+
+#testing for squared errors
+Math_predict <- predict(model, newdata = Math_Matrix)
+Language_predict <- predict(model, newdata = Language_Matrix)
+
+training_sse <- mean((Math$G3 - Math_predict) ^ 2)
+print(training_sse)
+testing_sse <- mean((Language$G3 - Language_predict) ^ 2)
+print(testing_sse)
+
+
+```
+
+```{r}
+#testing for size 6
+model <- elman(Math_Matrix, Math$G3,
+ size = 6, maxit = 500,
+ inputsTest = Language_Matrix, targetsTest = Language$G3,
+ linOut = TRUE)
+plotIterativeError(model)
+plot(Math$G3, type = "l")
+lines(model$fitted.values, col = "green")
+
+#testing for squared errors
+Math_predict <- predict(model, newdata = Math_Matrix)
+Language_predict <- predict(model, newdata = Language_Matrix)
+
+training_sse <- mean((Math$G3 - Math_predict) ^ 2)
+print(training_sse)
+testing_sse <- mean((Language$G3 - Language_predict) ^ 2)
+print(testing_sse)
+
+
+```
+
+```{r}
+#testing for size 8
+model <- elman(Math_Matrix, Math$G3,
+ size = 8, maxit = 500,
+ inputsTest = Language_Matrix, targetsTest = Language$G3,
+ linOut = TRUE)
+plotIterativeError(model)
+plot(Math$G3, type = "l")
+lines(model$fitted.values, col = "green")
+
+#testing for squared errors
+Math_predict <- predict(model, newdata = Math_Matrix)
+Language_predict <- predict(model, newdata = Language_Matrix)
+
+training_sse <- mean((Math$G3 - Math_predict) ^ 2)
+print(training_sse)
+testing_sse <- mean((Language$G3 - Language_predict) ^ 2)
+print(testing_sse)
+
+
+```
+
+```{r}
+#testing for size 10
+model <- elman(Math_Matrix, Math$G3,
+ size = 10, maxit = 500,
+ inputsTest = Language_Matrix, targetsTest = Language$G3,
+ linOut = TRUE)
+plotIterativeError(model)
+plot(Math$G3, type = "l")
+lines(model$fitted.values, col = "green")
+
+#testing for squared errors
+Math_predict <- predict(model, newdata = Math_Matrix)
+Language_predict <- predict(model, newdata = Language_Matrix)
+
+training_sse <- mean((Math$G3 - Math_predict) ^ 2)
+print(training_sse)
+testing_sse <- mean((Language$G3 - Language_predict) ^ 2)
+print(testing_sse)
+
+
+```
+Looking at the above 5 models, the one with the smallest mean squared error for the testing dataset is the one when size is equals to 2. The model performs better for the training dataset when size is increased but it also results in worst mean squared error for the testing dataset due to overfitting.
+
+2)
+```{r}
+library(bartMachine)
+
+# BART
+set_bart_machine_num_cores(parallel::detectCores())
+
+bart <- bartMachine(X = Math, y = Math$G3)
+bart
+
+predictions <- predict(bart, new_data = Language, type = "class")
+
+#testing for squared errors
+Math_predict <- predict(bart, new_data = Math, type = "class")
+Language_predict <- predict(bart, new_data = Language, type = "class")
+
+training_sse <- mean((Math$G3 - Math_predict) ^ 2)
+print(training_sse)
+testing_sse <- mean((Language$G3 - Language_predict) ^ 2)
+print(testing_sse)
+```
+
+We can see that BART gives a much smaller average squared error for both training and testing datasets compared to the elman model.

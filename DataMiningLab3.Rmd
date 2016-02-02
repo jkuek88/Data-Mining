@@ -1,0 +1,142 @@
+---
+title: "Data Mining Assignment 3"
+author: "Jonathan Kuek"
+date: "9 November 2015"
+output: html_document
+---
+
+```{r}
+library(lars)
+library(pls)
+```
+
+Q1)  
+Based on my mid term findings, the OLS model for apartment prices would be as follow: 
+```{r}
+training <- readRDS(gzcon(url('https://courseworks.columbia.edu/x/pJdP39')))
+testing <- readRDS(gzcon(url('https://courseworks.columbia.edu/x/QnKLgY')))
+
+ols <- lm(totalprice ~ area + zone + category + age + floor + rooms + out + conservation + toilets + garage + elevator + streetcategory + heating + storage, data = training)
+round(coef(summary(ols))[,1:3], 2)
+```
+
+```{r}
+
+X <- model.matrix(ols)
+y <- training$totalprice
+  
+ll <- function(beta) {
+  estimates <- (X %*% beta)
+  return( sum((estimates - y) ^ 2) )
+}
+
+opt <- optim(rep(0, ncol(X)), fn = ll, method = "BFGS")
+cbind(coef(ols), opt$par)
+```
+
+
+Q2)  
+```{r}
+PCR <- pcr(totalprice ~ area + zone + category + age + floor + rooms + out + conservation + toilets + garage + elevator + streetcategory + heating + storage, data = training, validation = "LOO")
+summary(PCR)
+plot(RMSEP(PCR), legendpos = "topleft")
+```
+
+
+```{r}
+PCR_prediction <- predict(PCR, newdata = testing)
+PCR_RMS <- RMSEP(PCR, newdata = testing)
+PCR_RMS
+PCR_SE <- 28630 ^ 2
+PCR_SE
+```
+Based on the lowest Root Mean Squared Error, we can obtain the lowest average squared error which is 44 comps, so k = 44.
+
+```{r}
+#OLS Error from mid terms
+y_hat <- predict(ols, newdata = testing)
+OLS_SE <- with(testing, mean((totalprice - y_hat)^2))
+OLS_SE
+PCR_SE - OLS_SE
+```
+Yes, I obtained a lower average squared error as compared to the midterms.  
+Q3)  
+
+```{r}
+load("~/Desktop/Columbia Fall Courses/G4058 Data Mining/Homework/Homework 3/dataset.RData")
+set.seed(222)
+sub <- sample(nrow(dataset), floor(nrow(dataset) * 0.8))
+training <- dataset[sub, ]
+testing <- dataset[-sub, ]
+```
+
+loan_amnt and installment are both numerical so I will plotting them into the scatterplot.
+
+```{r}
+
+par(pch = 20, las = 1) 
+with(training, plot(x = loan_amnt, y = installment, col = ifelse(delinq_2yrs < 1,1,2), pch = ifelse(y == 0,21,22)))
+
+abline(lm(installment ~ loan_amnt, data = training), lty = "dashed") 
+legend("topleft", legend = c("delinq_2yrs < 1","delinq_2yrs >= 1"), text.col = 1:2, title = "Color of points",
+bg = "lightgray", box.lwd = 0) 
+legend("bottomright", legend = c("y = 0","y = 1"), pch = 21:22, title = "Shape of points",
+bg = "lightgray", box.lwd = 0)
+```
+Looing at the scatterplot, it seems to me that delinq_2yrs alone is not that good a predictor of whether someone defaults.
+
+
+Initial Model  
+```{r}
+glm_logit <- glm(y ~ loan_amnt + installment + loan_amnt*installment + as.factor(delinq_2yrs), data = training)
+summary(glm_logit)
+
+y_hat_glm <- predict(glm_logit, newdata = testing, type = "response")
+summary(y_hat_glm)
+
+z_glm <- as.integer(y_hat_glm > 0.5)
+table(testing$y, z_glm)
+table(testing$y)
+```
+My intial model performs no better than simply assuming that everyone does not default and taking the actual proportions in the testing set.
+
+
+Final Model  
+
+```{r}
+model <- glm(y ~ log(loan_amnt) + int_rate + installment + term + int_rate*term + log(annual_inc) + revol_bal, data = training)
+summary(model)
+
+y_hat_model <- predict(model, newdata = testing, type = "response")
+summary(y_hat_model)
+
+z_model <- as.integer(y_hat_model > 0.5)
+table(testing$y, z_model)
+```
+
+I have tried models using the different packages but I did not find a model that could match the above by simply guessing all zeros (like all the respondents would not default). The only models that were equivalent was when I lowered the conventional rule that observations with a probability greater than 0.5 are classified as 1 to around 0.2. Refer to the below. 
+
+```{r}
+trial_model <- glm(y ~ log(loan_amnt) + delinq_2yrs + revol_bal, data = training)
+summary(trial_model)
+
+trial_y_hat_model <- predict(trial_model, newdata = testing, type = "response")
+summary(trial_y_hat_model)
+
+trial_z_model <- as.integer(trial_y_hat_model > 0.2)
+table(testing$y, trial_z_model)
+```
+
+ 
+Model for next year
+```{r}
+try(model <- glm(y ~ log(loan_amnt) + int_rate + installment + term + int_rate*term + log(annual_inc) + revol_bal, data = training))
+try(summary(model))
+
+try(y_hat_model <- predict(model, newdata = testing, type = "response"))
+try(summary(y_hat_model))
+
+try(z_model <- as.integer(y_hat_model > 0.5))
+try(table(next_year$y, z_model))
+```
+

@@ -1,0 +1,194 @@
+---
+title: "Data Mining Lab 4"
+author: "Jonathan Kuek"
+date: "21 November 2015"
+output: html_document
+---
+
+```{r}
+library(ISLR)
+library(gam)
+library(randomForest)
+
+str(College)
+```
+
+```{r}
+set.seed(222) #making sure that the results are the same when I knit the markdown file by choosing the same sample
+sub <- sample(nrow(College), floor(nrow(College) * 0.8))
+training <- College[sub, ]
+testing <- College[-sub, ]
+```
+
+(1a)
+```{r}
+# lm() and step() functions
+ols <- lm(Outstate ~ as.factor(Private) + Accept + Top10perc + Top25perc + F.Undergrad + Expend + Room.Board + Personal + perc.alumni + Expend:F.Undergrad, data = training)
+# For data mining we are not concerned about any of the coefficients nor the null hypothesis because we dont even distinguish between
+# sample and population.
+
+step_ols <- step(ols)
+summary(step_ols)
+```
+I have included one interaction term (Expend * F.Undergrad) into the equation.
+
+
+(1b) & (1c)
+```{r}
+#Obtaining the degrees of freedom for the splines
+
+plot(training$Private, training$Outstate)
+title("Private vs Non-private")
+ols_fit_Private <- lm(Outstate ~ Private, data = training)
+abline(ols_fit_Private, col = "blue")
+
+plot(training$Accept, training$Outstate)
+title("Number of Acceptance")
+fit_Accept <- smooth.spline(training$Accept, training$Outstate, cv = TRUE)
+lines(fit_Accept, col = "red")
+ols_fit_Accept <- lm(Outstate ~ Accept, data = training)
+abline(ols_fit_Accept, col = "blue")
+fit_Accept$df
+
+plot(training$Expend, training$Outstate)
+title("Expenditure")
+fit_Expend <- smooth.spline(training$Expend, training$Outstate, cv = TRUE)
+lines(fit_Expend, col = "red")
+ols_fit_Expend <- lm(Outstate ~ Expend, data = training)
+abline(ols_fit_Expend, col = "blue")
+fit_Expend$df
+
+plot(training$Top10perc, training$Outstate)
+title("top10perc")
+fit_top10perc <- smooth.spline(training$Top10perc, training$Outstate, cv = TRUE)
+lines(fit_top10perc, col = "red")
+ols_fit_top10perc <- lm(Outstate ~ Top10perc, data = training)
+abline(ols_fit_top10perc, col = "blue")
+fit_top10perc$df
+
+plot(training$F.Undergrad, training$Outstate)
+title("F.Undergrad")
+fit_F_Undergrad <- smooth.spline(training$F.Undergrad, training$Outstate, cv = TRUE)
+lines(fit_F_Undergrad, col = "red")
+ols_fit_F_Undergrad <- lm(Outstate ~ F.Undergrad, data = training)
+abline(ols_fit_F_Undergrad, col = "blue")
+fit_F_Undergrad$df
+
+plot(training$Room.Board, training$Outstate)
+title("Room and Board")
+fit_Room_Board <- smooth.spline(training$Room.Board, training$Outstate, cv = TRUE)
+lines(fit_Room_Board, col = "red")
+ols_fit_Room_Board <- lm(Outstate ~ Room.Board, data = training)
+abline(ols_fit_Room_Board, col = "blue")
+fit_Room_Board$df
+
+plot(training$Personal, training$Outstate)
+title("Personal")
+fit_Personal <- smooth.spline(training$Personal, training$Outstate, cv = TRUE)
+lines(fit_Personal, col = "red")
+ols_fit_Personal <- lm(Outstate ~ Personal, data = training)
+abline(ols_fit_Personal, col = "blue")
+fit_Personal$df
+
+plot(training$perc.alumni, training$Outstate)
+title("Contributions from Alumni")
+fit_perc_alumni <- smooth.spline(training$perc.alumni, training$Outstate, cv = TRUE)
+lines(fit_perc_alumni, col = "red")
+ols_fit_perc_alumni <- lm(Outstate ~ perc.alumni, data = training)
+abline(ols_fit_perc_alumni, col = "blue")
+fit_perc_alumni$df
+```
+
+The predictors that are non-linear are Accept, Expend, F.Undergrad, Room.Board and Personal according to the plots above.
+
+```{r}
+gam_outstate_splined <- gam(Outstate ~ as.factor(Private) + s(Accept, 8.02) + Top10perc + s(F.Undergrad, 11.08) + s(Expend, 4.84) + s(Room.Board, 10.59) + s(Personal, 5.49) + perc.alumni + Expend:F.Undergrad, data = training)
+
+plot.gam(gam_outstate_splined)
+
+```
+
+Calling plot on gam gives us the different plots of the different predictors versus the outcome (Outstate). The lines at the bottom represent the distribution of the points. The plots here resemble the individual plots I plotted above using smooth.scatter.
+
+(1d)
+
+```{r}
+#testing for squared errors
+gam_outstate_training <- predict(gam_outstate_splined, newdata = training)
+gam_outstate_testing <- predict(gam_outstate_splined, newdata = testing)
+
+mean((training$Outstate - gam_outstate_training) ^ 2)
+mean((testing$Outstate - gam_outstate_testing) ^ 2)
+
+```
+The training data mean squared error is 2950644 while the testing data mean squared error is 2637353 so the testing data mean squared error is smaller which is surprising. I would have expected that the mean squared error for the testing data to be bigger than the training data because it would have overfitted in the training data and thus give a higher mean squared error in the testing data.
+
+This might have been a one off case where my testing data set exhibits a better fit than the training data and the results might be different if I set a different seed above.
+
+(2)
+```{r}
+load("dataset2.RData")
+str(dataset)
+```
+
+(2a)
+
+# Zipcode is a cheap and quick way to do data mining for income. You can use the zipcode and cross reference to the census data and other official sources. That way the onus is on the company to get the remaining data as opposed to the individual who is required to fill up the other types of data where they might also not tell the truth.
+# However, there is also a limit on how much information we can extract from the zipcode.
+
+```{r}
+sub_dataset <- sample(nrow(dataset), floor(nrow(dataset) * 0.8))
+training_dataset <- dataset[sub_dataset, ]
+testing_dataset <- dataset[-sub_dataset, ]
+
+training_dataset$y <- as.factor(training_dataset$y)
+testing_dataset$y <- as.factor(testing_dataset$y)
+
+# Logit
+logit <- glm(y ~ Amount.Requested + Debt.To.Income.Ratio + Employment.Length, family = "binomial", data = training_dataset)
+summary(logit)
+
+predictions <- predict(logit, newdata = testing_dataset)
+z_model <- as.integer(predictions > 0.5)
+table(testing_dataset$y, z_model)
+```
+
+
+(2b)
+```{r}
+# bagging
+bagged <- randomForest(y ~ Amount.Requested + Debt.To.Income.Ratio + Employment.Length, data = training_dataset, 
+                       mtry = 3, importance = TRUE)
+bagged
+
+pb <- plot(bagged)
+legend("topright", legend = colnames(pb), col = 1:3, lty = 1:3)
+
+varImpPlot(bagged)
+
+predictions <- predict(bagged, newdata = testing_dataset, type = "class")
+table(testing_dataset$y, predictions)
+```
+
+```{r}
+library(bartMachine)
+
+# BART
+set_bart_machine_num_cores(parallel::detectCores())
+
+bart <- bartMachine(X = training_dataset[,c(1,2,5)], y = training_dataset$y)
+bart
+
+predictions <- predict(bart, new_data = testing_dataset[,c(1,2,5)], type = "class")
+table(testing_dataset$y, predictions)
+```
+
+
+(2c)
+
+Comparing the confusion matrix of the logit, bagging and BART models:
+We can see that the logit model predicts 1823 correctly and 177 wrongly, the bagging model predicts 1877 correctly and 123 wrongly and lastly the BART model predicts 1897 correctly and 103 wrongly. Based on this, I would conclude that the BART model would be the best followed by the bagging model and then the logit model.
+
+# Baysian and Data Mining are still two very different camps although they both do a job of predicting things for business. Traditional statistics (frequentist) usually do not do prediction but they just talk about repeated sampling.
+
+# Frequentist - repeated sampling. Baysian is about your belief about one sample.

@@ -1,0 +1,105 @@
+---
+title: "First Homework"
+author: "Jonathan Kuek"
+date: "23 September 2015"
+output: html_document
+---
+
+
+Q1 Data structures  
+In what ways does a list differ from a vector in R? Use R code to create one of each.  
+
+Vectors can only be one of the four types:  
+
+```{r}
+char <- c("Homework", "One")
+number <- c(2.9, 1.5)
+logic <- c(TRUE, FALSE)
+int <- c(-1L, 2L)
+char
+number
+logic
+int
+```
+
+Lists are containers and can contain different classes of elements:  
+
+```{r}
+mix <- list(char, number, logic, int)
+mix
+```
+
+2 Style  
+Rewrite the following code so that it is consistent with Hadley Wickham’s R style guide.  
+
+num = 1  
+mycondition <- round (runif (1,0,1,)) if( mycondition ) {  
+num <- num + 1  
+print(paste("num =" , num , sep=" ")) } else {  
+print("false") }  
+
+Rewritten code:
+```{r}
+num <- 1
+my_condition <- round(runif(1, 0, 1)) 
+if(my_condition) {
+  num <- num + 1
+  print(paste("num =", num, sep=" ")) 
+} else {
+  print("false") 
+}
+```
+
+Q3 Functions  
+Write an R function that does the following:  
+Inputs a positive numeric vector, verifies it is a positive numeric vector of length greater than one, and returns its geometric mean. You can look up the definition of the geometric mean on Wikipedia and utilize the prod() function.
+Utilize the stop() function with a clear error message in the case that the input is invalid. Finally, call your function with some valid input.
+
+```{r}
+geometric_mean <- function(input) {
+  l <- length(input)
+  if(l>1) {
+    if(all(input>0)){
+      answer <- prod(input)^(1/l)
+      print(answer)
+    } else {
+    stop('Error! Please enter a vector with more than one positive number')
+    }
+  } else {
+    stop('Error! Please enter a vector with more than one positive number')
+  }
+}
+
+geometric_mean(c(2, 18))
+```
+
+Q4 Subsetting a data.frame  
+In the RStudio console, call
+View(state.x77)
+to look at a spreadsheet-like representation of these data.
+Then write R code that extracts the data for New York on the variables Murder and Frost in three different ways.
+```{r}
+state.x77["New York", ]
+state.x77["New York", c("Murder", "Frost")]
+state.x77["New York", c(5, 7)]
+state.x77["New York", c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE)]
+```
+
+
+5 Manipulating data  
+In the RStudio console, type  
+
+```{r}
+help(airquality)
+```
+to see information on a data.frame regarding the air quality in New York. Then:
+Replace the Month variable with the month represented as an ordered factor.  
+```{r}
+new_air_quality <- data.frame(airquality)
+new_air_quality[1:31, 5] <- "May"
+new_air_quality[32:61, 5] <- "June"
+new_air_quality[62:92, 5] <- "July"
+new_air_quality[93:123, 5] <- "August"
+new_air_quality[124:153, 5] <- "September"
+new_air_quality
+```
